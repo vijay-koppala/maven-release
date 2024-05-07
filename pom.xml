@@ -1,0 +1,124 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.sitequesttech</groupId>
+  <artifactId>vijay-common</artifactId>
+  <version>1.0</version>
+  <packaging>pom</packaging>
+  <name>Multi Module for Vijay</name>
+  
+  <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>11</maven.compiler.source>
+	<maven.compiler.target>11</maven.compiler.target>
+	<project.scm.id>github</project.scm.id>
+    <!--
+     skip checkstyle here in the parent, it creates an unnecessary report otherwise.
+     unfortunately this also skips the child projects unless set false in their POM!
+     -->
+    <checkstyle.skip>true</checkstyle.skip>
+</properties>
+<scm child.scm.connection.inherit.append.path="false" child.scm.developerConnection.inherit.append.path="false" child.scm.url.inherit.append.path="false">
+	<url>https://github.com/vijay/maven-release</url>
+    <connection>
+	    scm:git:https://github.com/vijay/maven-release.git
+    </connection>
+    <developerConnection>
+	    scm:git:https://github.com/vijay/maven-release.git
+    </developerConnection>
+    <tag>HEAD</tag>
+  </scm>
+  
+  <build>
+    <defaultGoal>install</defaultGoal>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <argLine>-Djava.util.logging.config.file=src/test/resources/logging.properties</argLine>
+          <!--
+           This is required to get the build to pass on Jenkins. It's unclear if this is a kernel
+           issue with a 3.x CENTOS 8 kernel or something else. The build worked fine prior to
+           upgrading to Payara 5.2021.7 on the same kernel version so there's likely some
+           interaction between libraries loaded by Arquillian and Payara having a negative impact
+           on Mockito and Byte Buddy.
+           -->
+          <argLine>-Djdk.attach.allowAttachSelf=true</argLine>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <!--
+         Usage of combine.self="override" prevents the parent configuration from being applied.
+         This is required to prevent the jar settings from the parent from being applied to the
+         shared library jars. The library jars don't need the same manifest entries as the
+         application jars do.
+         -->
+        <configuration combine.self="override">
+          <!-- exclude the files used for static weaving -->
+          <excludes>
+            com/redoak/common/domain/temp/**,
+            META-INF/persistence.xml
+          </excludes>
+        </configuration>
+      </plugin>
+      <!-- google formatting and style checks -->
+      <plugin>
+        <groupId>com.spotify.fmt</groupId>
+        <artifactId>fmt-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+      </plugin>
+      <!-- source and javadoc for shared library -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <goals>
+              <!-- match release-profile to prevent duplication -->
+              <goal>jar-no-fork</goal>
+            </goals>
+            <configuration>
+              <!-- exclude the files used for static weaving -->
+              <excludes>
+                com/redoak/common/domain/temp/**,
+                META-INF/persistence.xml
+              </excludes>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>attach-javadocs</id>
+            <configuration>
+              <source>11</source>
+              <!-- exclude the files used for static weaving -->
+              <excludePackageNames>com.redoak.common.domain.temp</excludePackageNames>
+            </configuration>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-release-plugin</artifactId>
+        <configuration>
+          <!-- use project name for tag creation, not artifact id -->
+          <tagNameFormat>vijay-common-@{project.version}</tagNameFormat>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>
